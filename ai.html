@@ -1,490 +1,486 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <title>即梦驱动 | 专业制片分镜流水线 (V7 终极版)</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root { --bg: #050505; --panel: #111; --accent: #00f2fe; --border: #222; --role-color: #ff4d4f; --scene-color: #3b82f6; }
-        body { background: var(--bg); color: #ffffff; font-family: "PingFang SC", sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        
-        /* === 布局区块 === */
-        .sidebar { width: 360px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .editor { flex: 1; display: flex; flex-direction: column; background: #000; border-right: 1px solid var(--border); }
-        .analysis { width: 680px; background: var(--panel); display: flex; flex-direction: column; }
-
-        .header { padding: 15px 20px; border-bottom: 1px solid var(--border); font-weight: bold; font-size: 14px; background: #0a0a0a; color: var(--accent); display: flex; justify-content: space-between; align-items: center; }
-        
-        /* === 项目管理 === */
-        .project-manager { padding: 15px; background: #080808; border-bottom: 2px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-        .project-select { flex: 1; background: #1a1a1a; color: #fff; border: 1px solid #333; padding: 6px; border-radius: 4px; font-size: 13px; outline: none; }
-        .proj-btn { background: #1a1a1a; color: #ccc; border: 1px solid #333; padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; transition: 0.2s; }
-        .proj-btn:hover { background: #333; color: #fff; border-color: #555; }
-        .proj-btn.del:hover { background: #5c1616; color: #ff4d4f; border-color: #ff4d4f; }
-
-        /* === 剧本输入区 === */
-        #novelInput { flex: 1; background: transparent; border: none; color: #ccc; font-size: 15px; padding: 25px; outline: none; line-height: 1.8; resize: none; border-bottom: 1px solid var(--border); }
-        
-        .progress-container { padding: 15px 20px; background: #050505; border-bottom: 1px solid var(--border); }
-        .progress-bar { height: 6px; background: #1a1a1a; border-radius: 3px; overflow: hidden; }
-        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: 0.5s; box-shadow: 0 0 15px var(--accent); }
-
-        /* === 资产管理库 === */
-        .asset-list { flex: 1; overflow-y: auto; padding: 15px; }
-        .asset-card { background: #000; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; position: relative; }
-        .asset-card.role { border-left: 3px solid var(--role-color); } 
-        .asset-card.scene { border-left: 3px solid var(--scene-color); }
-        
-        .asset-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .asset-title { font-size: 14px; font-weight: bold; }
-
-        .move-btn-group { display: flex; gap: 4px; }
-        .move-btn { background: #1a1a1a; color: #666; border: 1px solid #333; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; }
-        .move-btn:hover { background: #333; color: var(--accent); border-color: var(--accent); }
-        .move-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-        .asset-card textarea { width: 100%; background: #0a0a0a; border: 1px solid #333; color: var(--accent); border-radius: 4px; padding: 8px; font-size: 12px; resize: none; box-sizing: border-box; line-height: 1.5; }
-
-        /* === 分镜展示区 === */
-        .shot-list { flex: 1; overflow-y: auto; padding: 25px; }
-        .segment-block { background: #000; border: 1px solid var(--border); border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
-        
-        .seg-title { font-size: 14px; font-weight: bold; color: #fff; margin-bottom: 15px; border-bottom: 1px solid #222; padding-bottom: 10px; display: flex; justify-content: space-between; }
-        .scene-badge { background: #1a1a1a; color: #fff; font-size: 12px; padding: 4px 8px; border-radius: 4px; }
-        
-        .field-name { font-size: 14px; color: #fff; font-weight: bold; margin-bottom: 8px; margin-top: 15px; }
-        .field-content { font-size: 14px; color: #fff; line-height: 1.8; background: #0a0a0a; padding: 15px; border-radius: 6px; border: 1px solid #1a1a1a; }
-        
-        /* 强制右侧全部纯白底色 */
-        .shot-item { font-size: 14px; color: #ffffff; padding: 15px 0; border-bottom: 1px dashed #222; cursor: pointer; text-align: justify; transition: 0.2s; }
-        .shot-item:hover { background: rgba(255,255,255,0.05); padding-left: 5px; }
-        
-        /* 强力标签颜色：角色红，场景蓝 */
-        .color-role { color: var(--role-color); font-weight: bold; }
-        .color-scene { color: var(--scene-color); font-weight: bold; }
-
-        .btn { background: var(--accent); color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .btn:disabled { opacity: 0.5; cursor: wait; }
-        .api-input { background: #1a1a1a; border: 1px solid #333; color: var(--accent); padding: 8px; border-radius: 6px; font-size: 12px; width: 180px; }
-    </style>
-</head>
-<body>
-
-    <aside class="sidebar">
-        <div class="project-manager">
-            <div style="width: 100%; font-size: 12px; color: var(--accent); margin-bottom: 5px; font-weight: bold;"><i class="fa-solid fa-folder-tree"></i> 项目管理</div>
-            <select id="projectSelect" class="project-select" onchange="switchProject()"></select>
-            <button class="proj-btn" onclick="createNewProject()">+ 新建</button>
-            <button class="proj-btn del" onclick="deleteCurrentProject()">- 删除</button>
-        </div>
-
-        <div class="header">全局大一统资产库 (@图片X)</div>
-        <div id="assetLibrary" class="asset-list">
-            <div style="text-align:center; color:#444; margin-top:50px; font-size:12px;">等待解析...</div>
-        </div>
-    </aside>
-
-    <main class="editor">
-        <div class="header">
-            <span>剧本流水线 (自动按"画面/场景"切分)</span>
-            <div style="display:flex; gap:10px;">
-                <input type="password" id="apiKey" class="api-input" placeholder="DeepSeek API Key">
-                <button class="btn" id="startBtn" onclick="startSceneWorkflow()">执行精确版解析</button>
-            </div>
-        </div>
-        <div class="progress-container">
-            <div style="display:flex; justify-content:space-between; font-size:12px; color:#888; margin-bottom:8px;">
-                <span id="progressText" style="color:var(--accent); font-weight:bold;">系统待机</span>
-                <span id="percentText">0 / 0 画面</span>
-            </div>
-            <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
-        </div>
-        <textarea id="novelInput" placeholder="在此粘贴原稿..." oninput="autoSave()"></textarea>
-    </main>
-
-    <section class="analysis">
-        <div class="header">六大类标准分镜 (标签已动态映射)</div>
-        <div id="shotList" class="shot-list"></div>
-    </section>
-
-<script>
-    let appData = { projects: {}, currentId: null };
-    // 统一大字典：角色场景混排
-    let globalAssets = { rawRoles: {}, rawScenes: {}, orderedAssets: [] };
-    let sceneQueue = [];
-    let currentSceneIndex = 0;
-    let rawSegmentsLog = [];
-
-    // 初始化加载
-    window.onload = function() {
-        const savedKey = localStorage.getItem('jimeng_deepseek_key');
-        if (savedKey) document.getElementById('apiKey').value = savedKey;
-        initProjectSystem();
-    }
-
-    // 独立 v7 缓存池
-    function initProjectSystem() {
-        const savedData = localStorage.getItem('jimeng_app_data_v7'); 
-        if (savedData) {
-            appData = JSON.parse(savedData);
-            if (!appData.projects[appData.currentId]) appData.currentId = Object.keys(appData.projects)[0];
-        } else {
-            let defaultId = 'proj_' + Date.now();
-            appData = {
-                projects: {
-                    [defaultId]: { id: defaultId, name: '新分镜项目', text: '', assets: { rawRoles: {}, rawScenes: {}, orderedAssets: [] }, rawSegments: [] }
-                },
-                currentId: defaultId
-            };
-        }
-        refreshProjectUI();
-        loadCurrentProject();
-    }
-
-    function saveAppData() {
-        localStorage.setItem('jimeng_app_data_v7', JSON.stringify(appData));
-    }
-
-    function autoSave() {
-        let cur = appData.projects[appData.currentId];
-        cur.text = document.getElementById('novelInput').value;
-        cur.assets = JSON.parse(JSON.stringify(globalAssets));
-        cur.rawSegments = JSON.parse(JSON.stringify(rawSegmentsLog));
-        saveAppData();
-    }
-
-    // --- 项目UI与操作 ---
-    function refreshProjectUI() {
-        const sel = document.getElementById('projectSelect');
-        sel.innerHTML = '';
-        for (let id in appData.projects) {
-            let opt = document.createElement('option');
-            opt.value = id;
-            opt.innerText = appData.projects[id].name;
-            if (id === appData.currentId) opt.selected = true;
-            sel.appendChild(opt);
-        }
-    }
-
-    function switchProject() {
-        autoSave();
-        appData.currentId = document.getElementById('projectSelect').value;
-        saveAppData();
-        loadCurrentProject();
-    }
-
-    function createNewProject() {
-        let name = prompt("请输入新项目的名称：", "项目 " + (Object.keys(appData.projects).length + 1));
-        if (!name) return;
-        autoSave();
-        let newId = 'proj_' + Date.now();
-        appData.projects[newId] = { id: newId, name: name, text: '', assets: { rawRoles: {}, rawScenes: {}, orderedAssets: [] }, rawSegments: [] };
-        appData.currentId = newId;
-        saveAppData();
-        refreshProjectUI();
-        loadCurrentProject();
-    }
-
-    function deleteCurrentProject() {
-        if(Object.keys(appData.projects).length <= 1) return alert("必须保留至少一个项目！");
-        if(confirm(`确定删除项目【${appData.projects[appData.currentId].name}】吗？不可恢复！`)) {
-            delete appData.projects[appData.currentId];
-            appData.currentId = Object.keys(appData.projects)[0];
-            saveAppData();
-            refreshProjectUI();
-            loadCurrentProject();
-        }
-    }
-
-    function loadCurrentProject() {
-        let cur = appData.projects[appData.currentId];
-        document.getElementById('novelInput').value = cur.text || '';
-        globalAssets = cur.assets ? JSON.parse(JSON.stringify(cur.assets)) : { rawRoles: {}, rawScenes: {}, orderedAssets: [] };
-        rawSegmentsLog = cur.rawSegments || [];
-        
-        renderAssetsUI();
-        renderAllShots(); 
-        document.getElementById('progressFill').style.width = '0%';
-        document.getElementById('percentText').innerText = '就绪';
-        document.getElementById('progressText').innerText = `已载入: ${cur.name}`;
-    }
-
-    // --- 动态资产排序 ---
-    function moveAsset(index, direction) {
-        const targetIndex = index + direction;
-        if (targetIndex < 0 || targetIndex >= globalAssets.orderedAssets.length) return;
-
-        const temp = globalAssets.orderedAssets[index];
-        globalAssets.orderedAssets[index] = globalAssets.orderedAssets[targetIndex];
-        globalAssets.orderedAssets[targetIndex] = temp;
-
-        autoSave();
-        renderAssetsUI();
-        renderAllShots(); 
-    }
-
-    // --- AI 流水线引擎 ---
-    function splitBySceneMarkers(text) {
-        const regex = /(?=^(?:场景\s*\d+|【场景\d*】|画面\s*\d+|【画面\d*】|Scene\s*\d+).*$)/m;
-        let scenes = text.split(regex).map(s => s.trim()).filter(s => s.length > 5);
-        if(scenes.length === 0) scenes = [text];
-        return scenes;
-    }
-
-    async function startSceneWorkflow() {
-        const text = document.getElementById('novelInput').value;
-        const key = document.getElementById('apiKey').value;
-        if(!text || !key) return alert("原稿与 API Key 不能为空！");
-
-        localStorage.setItem('jimeng_deepseek_key', key);
-        autoSave();
-
-        sceneQueue = splitBySceneMarkers(text);
-        currentSceneIndex = 0;
-        rawSegmentsLog = []; 
-        document.getElementById('shotList').innerHTML = '';
-
-        document.getElementById('startBtn').disabled = true;
-        processNextScene(key);
-    }
-
-    async function processNextScene(key) {
-        if(currentSceneIndex >= sceneQueue.length) {
-            document.getElementById('progressText').innerText = "全流水线解析完成！";
-            document.getElementById('startBtn').disabled = false;
-            autoSave();
-            return;
-        }
-
-        updateProgress();
-        const currentSceneText = sceneQueue[currentSceneIndex];
-
-        // 终极手册约束
-        const PROMPT = `你是一位严格执行《AI分镜文案生成训练手册（修订版·人物信息精确版）》的动漫导演。请对提供的【一个画面/场景】进行分镜解析。
-
-        【最高生死线法则】
-        1. 100%零漏词：原稿的每一句对白必须一字不差放入“镜头语言”。严禁概括！严禁缩减！
-        2. 13.0秒精确切分：按(字数÷7+动作)算。如果超出，必须拆分多个 segment，不准压缩内容。
-        3. 代词封杀令：无论人物还是场景，绝对禁止使用“你、我、他、她、它”。
-        4. 角色/场景双@标签：场景也必须用@。严禁出现 # 符号。
-        5. 客观提取：性别年龄若原文没提，强制标注“未知”。
-        6. 显微级镜头：动作描写必须极为丰富细致（角膜反光、肌肉牵引等）。
-
-        必须返回合法纯净的 JSON 格式（严禁携带 \`\`\`json 标记）：
-        {
-          "segments": [
-            {
-              "title": "分段1",
-              "roles": [{"name":"", "desc":"性别/年龄/特征"}],
-              "scenes": [{"name":"", "desc":""}],
-              "lighting": "光影布局...",
-              "shots": [{"text":"[类别+运动]，显微画面。完整台词。构图。景别。"}],
-              "style": "日式动漫...",
-              "limit": "无文字"
-            }
-          ],
-          "empty_scenes": [{"name":"", "prompt":""}],
-          "detected_roles": [{"name":"", "action_count": 1, "has_special_intro": true/false, "prompt":""}]
-        }`;
-
-        try {
-            const resp = await fetch("https://api.deepseek.com/chat/completions", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-                body: JSON.stringify({
-                    model: "deepseek-chat",
-                    messages: [{ role: "system", content: PROMPT }, { role: "user", content: currentSceneText }],
-                    response_format: { type: "json_object" },
-                    temperature: 0.1, 
-                    max_tokens: 8192
-                })
-            });
-
-            if (!resp.ok) {
-                const errData = await resp.json();
-                throw new Error(`API报错 [${resp.status}]: ${errData.error?.message || '未知错误'}`);
-            }
-
-            const data = await resp.json();
-            let content = data.choices[0].message.content;
-            content = content.replace(/^```json/gi, '').replace(/```$/g, '').trim(); // 剥离多余符号
-
-            const result = JSON.parse(content);
-            
-            updateAssetsLogic(result);
-            
-            result.segments.forEach(seg => {
-                seg.sceneNum = currentSceneIndex + 1;
-                rawSegmentsLog.push(seg);
-            });
-
-            renderAllShots(); 
-            autoSave();
-
-            currentSceneIndex++;
-            setTimeout(() => processNextScene(key), 2000);
-        } catch (e) {
-            console.error(e);
-            alert("解析异常中断！\n" + e.message);
-            document.getElementById('startBtn').disabled = false;
-        }
-    }
-
-    // --- 资产融合逻辑 ---
-    function updateAssetsLogic(result) {
-        // 更新角色
-        if(result.detected_roles) {
-            result.detected_roles.forEach(r => {
-                if (!globalAssets.rawRoles[r.name]) {
-                    globalAssets.rawRoles[r.name] = { count: r.action_count, hasIntro: r.has_special_intro, prompt: r.prompt };
-                } else {
-                    globalAssets.rawRoles[r.name].count += r.action_count;
-                    if(r.has_special_intro) globalAssets.rawRoles[r.name].hasIntro = true;
-                    if(r.has_special_intro || globalAssets.rawRoles[r.name].prompt.length < 20) {
-                        globalAssets.rawRoles[r.name].prompt = r.prompt;
-                    }
-                }
-                let roleData = globalAssets.rawRoles[r.name];
-                if (roleData.count >= 2 || roleData.hasIntro) {
-                    if (!globalAssets.orderedAssets.find(a => a.type === 'role' && a.name === r.name)) {
-                        globalAssets.orderedAssets.push({ type: 'role', name: r.name });
-                    }
-                }
-            });
-        }
-
-        // 更新场景
-        if(result.empty_scenes) {
-            result.empty_scenes.forEach(s => {
-                globalAssets.rawScenes[s.name] = { prompt: s.prompt };
-                if (!globalAssets.orderedAssets.find(a => a.type === 'scene' && a.name === s.name)) {
-                    globalAssets.orderedAssets.push({ type: 'scene', name: s.name });
-                }
-            });
-        }
-        renderAssetsUI();
-    }
-
-    function renderAssetsUI() {
-        const lib = document.getElementById('assetLibrary');
-        lib.innerHTML = '';
-        
-        globalAssets.orderedAssets.forEach((asset, index) => {
-            let promptText = asset.type === 'role' ? globalAssets.rawRoles[asset.name].prompt : globalAssets.rawScenes[asset.name].prompt;
-            lib.innerHTML += createAssetCard(asset.type, index, asset.name, promptText);
-        });
-    }
-
-    function createAssetCard(type, index, name, promptText) {
-        const colorClass = type === 'role' ? 'color-role' : 'color-scene';
-        const displayTitle = `@图片${index + 1} ${name}`;
-
-        return `
-            <div class="asset-card ${type}">
-                <div class="asset-header">
-                    <span class="asset-title ${colorClass}">${displayTitle}</span>
-                    <div class="move-btn-group">
-                        <button class="move-btn" onclick="moveAsset(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑上移</button>
-                        <button class="move-btn" onclick="moveAsset(${index}, 1)" ${index === globalAssets.orderedAssets.length - 1 ? 'disabled' : ''}>↓下移</button>
-                    </div>
-                </div>
-                <textarea onchange="updateAssetPrompt('${type}', '${name}', this.value)">${promptText}</textarea>
-            </div>`;
-    }
-
-    function updateAssetPrompt(type, name, val) {
-        if(type === 'role') globalAssets.rawRoles[name].prompt = val;
-        if(type === 'scene') globalAssets.rawScenes[name].prompt = val;
-        autoSave();
-    }
-
-    function renderAllShots() {
-        const sList = document.getElementById('shotList');
-        sList.innerHTML = '';
-        
-        rawSegmentsLog.forEach(seg => {
-            const block = document.createElement('div');
-            block.className = 'segment-block';
-            
-            let shotItems = seg.shots.map(s => {
-                let finalText = processShotText(s.text); 
-                return `<div class="shot-item" onclick="copyPrompt(this)">${finalText}</div>`;
-            }).join('');
-
-            // 彻底去除多余符号，只留“镜头语言”
-            block.innerHTML = `
-                <div class="seg-title">
-                    <span>${seg.title} (精确13.0s)</span>
-                    <span class="scene-badge">第 ${seg.sceneNum} 画面</span>
-                </div>
-                <div class="field-name">人物提取</div>
-                <div class="field-content">${seg.roles.map(r=>`@${r.name}: ${r.desc}`).join('<br>')}</div>
-                <div class="field-name">场景建模</div>
-                <div class="field-content">${seg.scenes.map(s=>`@${s.name}: ${s.desc}`).join('<br>')}<br>光影: ${seg.lighting}</div>
-                <div class="field-name">镜头语言</div>
-                <div class="field-content" style="background:#000;">${shotItems}</div>
-                <div class="field-name">固定风格</div>
-                <div class="field-content">${seg.style} | ${seg.limit}</div>
-            `;
-            sList.appendChild(block);
-        });
-        sList.scrollTop = sList.scrollHeight;
-    }
-
-    // --- 强力替换引擎 (破除中文连字阻碍) ---
-    function processShotText(text) {
-        let newText = text;
-        let placeholders = {};
-
-        // 1. 按名字长度从大到小排序，防止误伤（如 林诺诺 盖过 林诺）
-        let assetsWithIndex = globalAssets.orderedAssets.map((asset, index) => ({
-            ...asset, originalIndex: index
-        }));
-        assetsWithIndex.sort((a, b) => b.name.length - a.name.length);
-
-        // 2. 无差别扫描文本，锁定有效资产
-        assetsWithIndex.forEach((asset) => {
-            let safeName = asset.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            // 不管前面有@还是#还是没有，只要碰到了就强行替换
-            let regex = new RegExp(`[@#]?${safeName}`, 'g');
-            
-            let cssClass = asset.type === 'role' ? 'color-role' : 'color-scene';
-            let html = `<span class="${cssClass}">@图片${asset.originalIndex + 1} @${asset.name}</span>`;
-            
-            let placeholder = `__ASSET_${asset.originalIndex}__`;
-            placeholders[placeholder] = html;
-            newText = newText.replace(regex, placeholder);
-        });
-
-        // 3. 对那些被 AI 添加了@但没进库的临时路人进行基本标红
-        newText = newText.replace(/[@#]([\u4e00-\u9fa5a-zA-Z0-9_-]+)/g, function(match) {
-            if(match.includes('__ASSET_')) return match; 
-            return `<span class="color-role">${match}</span>`;
-        });
-
-        // 4. 将占位符变回带颜色的 HTML 标签
-        for (let key in placeholders) {
-            let regex = new RegExp(key, 'g');
-            newText = newText.replace(regex, placeholders[key]);
-        }
-        return newText;
-    }
-
-    function updateProgress() {
-        const total = sceneQueue.length;
-        const current = currentSceneIndex + 1;
-        const percent = Math.round((current / total) * 100);
-        document.getElementById('progressFill').style.width = percent + '%';
-        document.getElementById('percentText').innerText = `${current} / ${total} 画面`;
-        document.getElementById('progressText').innerText = `正在处理: 第 ${current} 画面 ...`;
-    }
-
-    function copyPrompt(el) {
-        navigator.clipboard.writeText(el.innerText);
-        const origColor = el.style.color;
-        el.style.color = "#00f2fe"; 
-        setTimeout(() => el.style.color = origColor, 300);
-    }
-</script>
-</body>
-</html>
+<!DOCTYPE html>  
+<html lang="zh-CN">  
+<head>  
+    <meta charset="UTF-8">  
+    <title>即梦驱动 | 专业制片分镜流水线 (V10 终极骨骼级引擎)</title>  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+    <style>  
+        :root { --bg: #050505; --panel: #111; --accent: #00f2fe; --border: #222; --role-color: #ff4d4f; --scene-color: #3b82f6; }  
+        body { background: var(--bg); color: #ffffff; font-family: "PingFang SC", sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }  
+          
+        /* === 布局区块 === */  
+        .sidebar { width: 360px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }  
+        .editor { flex: 1; display: flex; flex-direction: column; background: #000; border-right: 1px solid var(--border); }  
+        .analysis { width: 680px; background: var(--panel); display: flex; flex-direction: column; }  
+  
+        .header { padding: 15px 20px; border-bottom: 1px solid var(--border); font-weight: bold; font-size: 14px; background: #0a0a0a; color: var(--accent); display: flex; justify-content: space-between; align-items: center; }  
+          
+        /* === 项目管理 === */  
+        .project-manager { padding: 15px; background: #080808; border-bottom: 2px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }  
+        .project-select { flex: 1; background: #1a1a1a; color: #fff; border: 1px solid #333; padding: 6px; border-radius: 4px; font-size: 13px; outline: none; }  
+        .proj-btn { background: #1a1a1a; color: #ccc; border: 1px solid #333; padding: 6px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; transition: 0.2s; }  
+        .proj-btn:hover { background: #333; color: #fff; border-color: #555; }  
+        .proj-btn.del:hover { background: #5c1616; color: #ff4d4f; border-color: #ff4d4f; }  
+  
+        /* === 剧本输入区 === */  
+        #novelInput { flex: 1; background: transparent; border: none; color: #ccc; font-size: 15px; padding: 25px; outline: none; line-height: 1.8; resize: none; border-bottom: 1px solid var(--border); }  
+          
+        .progress-container { padding: 15px 20px; background: #050505; border-bottom: 1px solid var(--border); }  
+        .progress-bar { height: 6px; background: #1a1a1a; border-radius: 3px; overflow: hidden; }  
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: 0.5s; box-shadow: 0 0 15px var(--accent); }  
+  
+        /* === 资产管理库 === */  
+        .asset-list { flex: 1; overflow-y: auto; padding: 15px; }  
+        .asset-card { background: #000; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; position: relative; }  
+        .asset-card.role { border-left: 3px solid var(--role-color); }   
+        .asset-card.scene { border-left: 3px solid var(--scene-color); }  
+          
+        .asset-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }  
+        .asset-title { font-size: 14px; font-weight: bold; }  
+  
+        .move-btn-group { display: flex; gap: 4px; }  
+        .move-btn { background: #1a1a1a; color: #666; border: 1px solid #333; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; }  
+        .move-btn:hover { background: #333; color: var(--accent); border-color: var(--accent); }  
+        .move-btn:disabled { opacity: 0.3; cursor: not-allowed; }  
+  
+        .asset-card textarea { width: 100%; background: #0a0a0a; border: 1px solid #333; color: var(--accent); border-radius: 4px; padding: 8px; font-size: 12px; resize: none; box-sizing: border-box; line-height: 1.5; }  
+  
+        /* === 分镜展示区 === */  
+        .shot-list { flex: 1; overflow-y: auto; padding: 25px; }  
+        .segment-block { background: #000; border: 1px solid var(--border); border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }  
+          
+        .seg-title { font-size: 14px; font-weight: bold; color: #fff; margin-bottom: 15px; border-bottom: 1px solid #222; padding-bottom: 10px; display: flex; justify-content: space-between; }  
+        .scene-badge { background: #1a1a1a; color: #fff; font-size: 12px; padding: 4px 8px; border-radius: 4px; }  
+          
+        .field-name { font-size: 14px; color: #fff; font-weight: bold; margin-bottom: 8px; margin-top: 15px; }  
+        .field-content { font-size: 14px; color: #fff; line-height: 1.8; background: #0a0a0a; padding: 15px; border-radius: 6px; border: 1px solid #1a1a1a; }  
+          
+        /* 强制右侧全部纯白底色 */  
+        .shot-item { font-size: 14px; color: #ffffff; padding: 15px 0; border-bottom: 1px dashed #222; cursor: pointer; text-align: justify; transition: 0.2s; }  
+        .shot-item:hover { background: rgba(255,255,255,0.05); padding-left: 5px; }  
+          
+        /* 强力标签颜色：角色红，场景蓝 */  
+        .color-role { color: var(--role-color); font-weight: bold; }  
+        .color-scene { color: var(--scene-color); font-weight: bold; }  
+  
+        .btn { background: var(--accent); color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }  
+        .btn:disabled { opacity: 0.5; cursor: wait; }  
+        .api-input { background: #1a1a1a; border: 1px solid #333; color: var(--accent); padding: 8px; border-radius: 6px; font-size: 12px; width: 180px; }  
+    </style>  
+</head>  
+<body>  
+  
+    <aside class="sidebar">  
+        <div class="project-manager">  
+            <div style="width: 100%; font-size: 12px; color: var(--accent); margin-bottom: 5px; font-weight: bold;"><i class="fa-solid fa-folder-tree"></i> 项目管理</div>  
+            <select id="projectSelect" class="project-select" onchange="switchProject()"></select>  
+            <button class="proj-btn" onclick="createNewProject()">+ 新建</button>  
+            <button class="proj-btn del" onclick="deleteCurrentProject()">- 删除</button>  
+        </div>  
+  
+        <div class="header">全局大一统资产库 (@图片X)</div>  
+        <div id="assetLibrary" class="asset-list">  
+            <div style="text-align:center; color:#444; margin-top:50px; font-size:12px;">等待解析...</div>  
+        </div>  
+    </aside>  
+  
+    <main class="editor">  
+        <div class="header">  
+            <span>剧本流水线 (自动按"画面/场景"切分)</span>  
+            <div style="display:flex; gap:10px;">  
+                <input type="password" id="apiKey" class="api-input" placeholder="DeepSeek API Key">  
+                <button class="btn" id="startBtn" onclick="startSceneWorkflow()">执行精确版解析</button>  
+            </div>  
+        </div>  
+        <div class="progress-container">  
+            <div style="display:flex; justify-content:space-between; font-size:12px; color:#888; margin-bottom:8px;">  
+                <span id="progressText" style="color:var(--accent); font-weight:bold;">系统待机</span>  
+                <span id="percentText">0 / 0 画面</span>  
+            </div>  
+            <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>  
+        </div>  
+        <textarea id="novelInput" placeholder="在此粘贴原稿..." oninput="autoSave()"></textarea>  
+    </main>  
+  
+    <section class="analysis">  
+        <div class="header">六大类标准分镜 (标签已动态映射)</div>  
+        <div id="shotList" class="shot-list"></div>  
+    </section>  
+  
+<script>  
+    let appData = { projects: {}, currentId: null };  
+    let globalAssets = { rawRoles: {}, rawScenes: {}, orderedAssets: [] };  
+    let sceneQueue = [];  
+    let currentSceneIndex = 0;  
+    let rawSegmentsLog = [];  
+  
+    window.onload = function() {  
+        const savedKey = localStorage.getItem('jimeng_deepseek_key');  
+        if (savedKey) document.getElementById('apiKey').value = savedKey;  
+        initProjectSystem();  
+    }  
+  
+    // 使用全新 V10 缓存避免冲突  
+    function initProjectSystem() {  
+        const savedData = localStorage.getItem('jimeng_app_data_v10');   
+        if (savedData) {  
+            appData = JSON.parse(savedData);  
+            if (!appData.projects[appData.currentId]) appData.currentId = Object.keys(appData.projects)[0];  
+        } else {  
+            let defaultId = 'proj_' + Date.now();  
+            appData = {  
+                projects: {  
+                    [defaultId]: { id: defaultId, name: '新分镜项目', text: '', assets: { rawRoles: {}, rawScenes: {}, orderedAssets: [] }, rawSegments: [] }  
+                },  
+                currentId: defaultId  
+            };  
+        }  
+        refreshProjectUI();  
+        loadCurrentProject();  
+    }  
+  
+    function saveAppData() {  
+        localStorage.setItem('jimeng_app_data_v10', JSON.stringify(appData));  
+    }  
+  
+    function autoSave() {  
+        let cur = appData.projects[appData.currentId];  
+        cur.text = document.getElementById('novelInput').value;  
+        cur.assets = JSON.parse(JSON.stringify(globalAssets));  
+        cur.rawSegments = JSON.parse(JSON.stringify(rawSegmentsLog));  
+        saveAppData();  
+    }  
+  
+    function refreshProjectUI() {  
+        const sel = document.getElementById('projectSelect');  
+        sel.innerHTML = '';  
+        for (let id in appData.projects) {  
+            let opt = document.createElement('option');  
+            opt.value = id;  
+            opt.innerText = appData.projects[id].name;  
+            if (id === appData.currentId) opt.selected = true;  
+            sel.appendChild(opt);  
+        }  
+    }  
+  
+    function switchProject() {  
+        autoSave();  
+        appData.currentId = document.getElementById('projectSelect').value;  
+        saveAppData();  
+        loadCurrentProject();  
+    }  
+  
+    function createNewProject() {  
+        let name = prompt("请输入新项目的名称：", "项目 " + (Object.keys(appData.projects).length + 1));  
+        if (!name) return;  
+        autoSave();  
+        let newId = 'proj_' + Date.now();  
+        appData.projects[newId] = { id: newId, name: name, text: '', assets: { rawRoles: {}, rawScenes: {}, orderedAssets: [] }, rawSegments: [] };  
+        appData.currentId = newId;  
+        saveAppData();  
+        refreshProjectUI();  
+        loadCurrentProject();  
+    }  
+  
+    function deleteCurrentProject() {  
+        if(Object.keys(appData.projects).length <= 1) return alert("必须保留至少一个项目！");  
+        if(confirm(`确定删除项目【${appData.projects[appData.currentId].name}】吗？不可恢复！`)) {  
+            delete appData.projects[appData.currentId];  
+            appData.currentId = Object.keys(appData.projects)[0];  
+            saveAppData();  
+            refreshProjectUI();  
+            loadCurrentProject();  
+        }  
+    }  
+  
+    function loadCurrentProject() {  
+        let cur = appData.projects[appData.currentId];  
+        document.getElementById('novelInput').value = cur.text || '';  
+        globalAssets = cur.assets ? JSON.parse(JSON.stringify(cur.assets)) : { rawRoles: {}, rawScenes: {}, orderedAssets: [] };  
+        rawSegmentsLog = cur.rawSegments || [];  
+          
+        renderAssetsUI();  
+        renderAllShots();   
+        document.getElementById('progressFill').style.width = '0%';  
+        document.getElementById('percentText').innerText = '就绪';  
+        document.getElementById('progressText').innerText = `已载入: ${cur.name}`;  
+    }  
+  
+    function moveAsset(index, direction) {  
+        const targetIndex = index + direction;  
+        if (targetIndex < 0 || targetIndex >= globalAssets.orderedAssets.length) return;  
+  
+        const temp = globalAssets.orderedAssets[index];  
+        globalAssets.orderedAssets[index] = globalAssets.orderedAssets[targetIndex];  
+        globalAssets.orderedAssets[targetIndex] = temp;  
+  
+        autoSave();  
+        renderAssetsUI();  
+        renderAllShots();   
+    }  
+  
+    function splitBySceneMarkers(text) {  
+        const regex = /(?=^(?:场景\s*\d+|【场景\d*】|画面\s*\d+|【画面\d*】|Scene\s*\d+).*$)/m;  
+        let scenes = text.split(regex).map(s => s.trim()).filter(s => s.length > 5);  
+        if(scenes.length === 0) scenes = [text];  
+        return scenes;  
+    }  
+  
+    async function startSceneWorkflow() {  
+        const text = document.getElementById('novelInput').value;  
+        const key = document.getElementById('apiKey').value;  
+        if(!text || !key) return alert("原稿与 API Key 不能为空！");  
+  
+        localStorage.setItem('jimeng_deepseek_key', key);  
+        autoSave();  
+  
+        sceneQueue = splitBySceneMarkers(text);  
+        currentSceneIndex = 0;  
+        rawSegmentsLog = [];   
+        document.getElementById('shotList').innerHTML = '';  
+  
+        document.getElementById('startBtn').disabled = true;  
+        processNextScene(key);  
+    }  
+  
+    async function processNextScene(key) {  
+        if(currentSceneIndex >= sceneQueue.length) {  
+            document.getElementById('progressText').innerText = "全流水线解析完成！";  
+            document.getElementById('startBtn').disabled = false;  
+            autoSave();  
+            return;  
+        }  
+  
+        updateProgress();  
+        const currentSceneText = sceneQueue[currentSceneIndex];  
+  
+        // 终极版系统指令：植入骨骼级画面感与动态并发时长  
+        const PROMPT = `你是一位专业严谨的动漫导演。请将用户提供的剧本转化为专业分镜脚本。必须返回合法纯净的 JSON 格式，严禁携带 \`\`\`json 标记。  
+  
+        【三大核心法则】  
+        一、 骨骼级动作解构（画面感约束）  
+        严禁使用干瘪的概括性动词。必须写出精确的物理坐标、肢体细节和物体交互：  
+        1. 错误演示：“@林妙 持剑站立。”  
+        2. 正确演示：“@林妙 双脚略微错开，左手反握长剑背于身后，脊背挺直。”  
+        3. 写出物理反馈：如重力、风力、肌肉紧绷感、光照反射等。  
+  
+        二、 并发执行与动态时长法则  
+        严禁将动作、台词、镜头时间机械相加！  
+        1. 并发原则：单镜头真实时长 = Max(台词所需时长, 核心动作所需时长)。  
+        2. 动态语速：正常(字数÷4)；独白/沉思(字数÷2.5)；激动急促(字数÷6)。  
+        3. 若当前镜头推演后，分段总时长将超出 13.0 秒，必须在此刻无条件切断，将剩余内容放入下一分段。  
+  
+        三、 绝对红线  
+        1. 100%零漏词：原稿的每一句对白必须一字不差写入镜头，严禁删减。  
+        2. 零代词封杀令：绝对禁止出现“你、我、他、她、它”，全用角色名。  
+        3. 零脑补人设：没写的强制填“未知”，严禁推断。  
+        4. 统一 @ 标签：所有人物和场景一律用 @ 前缀。严禁使用 # 符号。  
+  
+        【JSON 输出结构模板】  
+        {  
+          "segments": [  
+            {  
+              "title": "分段1",  
+              "roles": [{"name":"林默", "desc":"性别未知/年龄未知/疲惫"}],  
+              "scenes": [{"name":"破旧街道", "desc":"详细描述"}],  
+              "lighting": "光影描述",  
+              "shots": [{"text":"[特写推近]，镜头聚焦 @林默 的右眼。@林默 咬紧牙关，额角青筋暴起，低声呢喃：“对白内容。” 瞳孔收缩，倒映着火光。中心构图。特写。"}],  
+              "style": "日式热血动漫风格, 8K超清, 极致细节",  
+              "limit": "无文字, 无背景音乐"  
+            }  
+          ],  
+          "empty_scenes": [{"name":"破旧街道", "prompt":"空镜描述，日式动漫风格, 8K超清"}],  
+          "detected_roles": [{"name":"林默", "action_count": 1, "has_special_intro": true, "prompt":"角色外观，日式动漫风格, 8K超清"}]  
+        }`;  
+  
+        try {  
+            const resp = await fetch("https://api.deepseek.com/chat/completions", {  
+                method: "POST",  
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },  
+                body: JSON.stringify({  
+                    model: "deepseek-chat",  
+                    messages: [{ role: "system", content: PROMPT }, { role: "user", content: currentSceneText }],  
+                    response_format: { type: "json_object" },  
+                    temperature: 0.1,   
+                    max_tokens: 8192  
+                })  
+            });  
+  
+            if (!resp.ok) {  
+                const errData = await resp.json();  
+                throw new Error(`API报错 [${resp.status}]: ${errData.error?.message || '未知错误'}`);  
+            }  
+  
+            const data = await resp.json();  
+            let content = data.choices[0].message.content;  
+            content = content.replace(/^```json/gi, '').replace(/```$/g, '').trim();   
+  
+            const result = JSON.parse(content);  
+              
+            updateAssetsLogic(result);  
+              
+            result.segments.forEach(seg => {  
+                seg.sceneNum = currentSceneIndex + 1;  
+                rawSegmentsLog.push(seg);  
+            });  
+  
+            renderAllShots();   
+            autoSave();  
+  
+            currentSceneIndex++;  
+            setTimeout(() => processNextScene(key), 2000);  
+        } catch (e) {  
+            console.error(e);  
+            alert("解析异常中断！\n" + e.message);  
+            document.getElementById('startBtn').disabled = false;  
+        }  
+    }  
+  
+    function updateAssetsLogic(result) {  
+        if(result.detected_roles) {  
+            result.detected_roles.forEach(r => {  
+                if (!globalAssets.rawRoles[r.name]) {  
+                    globalAssets.rawRoles[r.name] = { count: r.action_count, hasIntro: r.has_special_intro, prompt: r.prompt };  
+                } else {  
+                    globalAssets.rawRoles[r.name].count += r.action_count;  
+                    if(r.has_special_intro) globalAssets.rawRoles[r.name].hasIntro = true;  
+                    if(r.has_special_intro || globalAssets.rawRoles[r.name].prompt.length < 20) {  
+                        globalAssets.rawRoles[r.name].prompt = r.prompt;  
+                    }  
+                }  
+                let roleData = globalAssets.rawRoles[r.name];  
+                if (roleData.count >= 2 || roleData.hasIntro) {  
+                    if (!globalAssets.orderedAssets.find(a => a.type === 'role' && a.name === r.name)) {  
+                        globalAssets.orderedAssets.push({ type: 'role', name: r.name });  
+                    }  
+                }  
+            });  
+        }  
+  
+        if(result.empty_scenes) {  
+            result.empty_scenes.forEach(s => {  
+                globalAssets.rawScenes[s.name] = { prompt: s.prompt };  
+                if (!globalAssets.orderedAssets.find(a => a.type === 'scene' && a.name === s.name)) {  
+                    globalAssets.orderedAssets.push({ type: 'scene', name: s.name });  
+                }  
+            });  
+        }  
+        renderAssetsUI();  
+    }  
+  
+    function renderAssetsUI() {  
+        const lib = document.getElementById('assetLibrary');  
+        lib.innerHTML = '';  
+          
+        globalAssets.orderedAssets.forEach((asset, index) => {  
+            let promptText = asset.type === 'role' ? globalAssets.rawRoles[asset.name].prompt : globalAssets.rawScenes[asset.name].prompt;  
+            lib.innerHTML += createAssetCard(asset.type, index, asset.name, promptText);  
+        });  
+    }  
+  
+    function createAssetCard(type, index, name, promptText) {  
+        const colorClass = type === 'role' ? 'color-role' : 'color-scene';  
+        const displayTitle = `@图片${index + 1} ${name}`;  
+  
+        return `  
+            <div class="asset-card ${type}">  
+                <div class="asset-header">  
+                    <span class="asset-title ${colorClass}">${displayTitle}</span>  
+                    <div class="move-btn-group">  
+                        <button class="move-btn" onclick="moveAsset(${index}, -1)" ${index === 0 ? 'disabled' : ''}>↑上移</button>  
+                        <button class="move-btn" onclick="moveAsset(${index}, 1)" ${index === globalAssets.orderedAssets.length - 1 ? 'disabled' : ''}>↓下移</button>  
+                    </div>  
+                </div>  
+                <textarea onchange="updateAssetPrompt('${type}', '${name}', this.value)">${promptText}</textarea>  
+            </div>`;  
+    }  
+  
+    function updateAssetPrompt(type, name, val) {  
+        if(type === 'role') globalAssets.rawRoles[name].prompt = val;  
+        if(type === 'scene') globalAssets.rawScenes[name].prompt = val;  
+        autoSave();  
+    }  
+  
+    function renderAllShots() {  
+        const sList = document.getElementById('shotList');  
+        sList.innerHTML = '';  
+          
+        rawSegmentsLog.forEach(seg => {  
+            const block = document.createElement('div');  
+            block.className = 'segment-block';  
+              
+            let shotItems = seg.shots.map(s => {  
+                let finalText = processShotText(s.text);   
+                return `<div class="shot-item" onclick="copyPrompt(this)">${finalText}</div>`;  
+            }).join('');  
+  
+            block.innerHTML = `  
+                <div class="seg-title">  
+                    <span>${seg.title} (精确13.0s)</span>  
+                    <span class="scene-badge">第 ${seg.sceneNum} 画面</span>  
+                </div>  
+                <div class="field-name">人物提取</div>  
+                <div class="field-content">${seg.roles.map(r=>`@${r.name}: ${r.desc}`).join('<br>')}</div>  
+                <div class="field-name">场景建模</div>  
+                <div class="field-content">${seg.scenes.map(s=>`@${s.name}: ${s.desc}`).join('<br>')}<br>光影: ${seg.lighting}</div>  
+                <div class="field-name">镜头语言</div>  
+                <div class="field-content" style="background:#000;">${shotItems}</div>  
+                <div class="field-name">固定风格</div>  
+                <div class="field-content">${seg.style} | ${seg.limit}</div>  
+            `;  
+            sList.appendChild(block);  
+        });  
+        sList.scrollTop = sList.scrollHeight;  
+    }  
+  
+    function processShotText(text) {  
+        let newText = text;  
+        let placeholders = {};  
+  
+        let assetsWithIndex = globalAssets.orderedAssets.map((asset, index) => ({  
+            ...asset, originalIndex: index  
+        }));  
+        assetsWithIndex.sort((a, b) => b.name.length - a.name.length);  
+  
+        assetsWithIndex.forEach((asset) => {  
+            let safeName = asset.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');  
+            let regex = new RegExp(`[@#]?${safeName}`, 'g');  
+              
+            let cssClass = asset.type === 'role' ? 'color-role' : 'color-scene';  
+            let html = `<span class="${cssClass}">@图片${asset.originalIndex + 1} @${asset.name}</span>`;  
+              
+            let placeholder = `__ASSET_${asset.originalIndex}__`;  
+            placeholders[placeholder] = html;  
+            newText = newText.replace(regex, placeholder);  
+        });  
+  
+        newText = newText.replace(/[@#]([\u4e00-\u9fa5a-zA-Z0-9_-]+)/g, function(match) {  
+            if(match.includes('__ASSET_')) return match;   
+            return `<span class="color-role">${match}</span>`;  
+        });  
+  
+        for (let key in placeholders) {  
+            let regex = new RegExp(key, 'g');  
+            newText = newText.replace(regex, placeholders[key]);  
+        }  
+        return newText;  
+    }  
+  
+    function updateProgress() {  
+        const total = sceneQueue.length;  
+        const current = currentSceneIndex + 1;  
+        const percent = Math.round((current / total) * 100);  
+        document.getElementById('progressFill').style.width = percent + '%';  
+        document.getElementById('percentText').innerText = `${current} / ${total} 画面`;  
+        document.getElementById('progressText').innerText = `正在处理: 第 ${current} 画面 ...`;  
+    }  
+  
+    function copyPrompt(el) {  
+        navigator.clipboard.writeText(el.innerText);  
+        const origColor = el.style.color;  
+        el.style.color = "#00f2fe";   
+        setTimeout(() => el.style.color = origColor, 300);  
+    }  
+</script>  
+</body>  
+</html>  
